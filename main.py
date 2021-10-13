@@ -19,27 +19,40 @@ class DBManager:
 
     async def run(self):
         for guild in self.client.guilds:
-            await send_embed(self.client, guild, self.timestamp)
+            await send_embed(self.client, guild, self.timestamp, edit=True)
         while True:
             self.timestamp = await self.update_timestamp()
             for guild in self.client.guilds:
-                await send_embed(self.client, guild, self.timestamp)
+                await send_embed(self.client, guild, self.timestamp, edit=True)
 
 
-async def send_embed(client, guild, timestamp):
+async def send_embed(client, guild, timestamp, edit=False):
+    send = False
     with shelve.open('db', writeback=True) as db:
         if str(guild.id) in db:
-            if db[str(guild.id)]["last_message"] is not None:
-                channel, message = itemgetter("channel", "message")(db[str(guild.id)]["last_message"])
-                try:
-                    await client.http.delete_message(channel, message)
-                except discord.errors.NotFound as e:  # we really do not need to handle this, I promise
-                    pass
 
             embed = discord.Embed(title="Ostatnia wizyta w siedzibie koła")
             embed.set_author(name="SKN main bot")
             embed.add_field(name="Godzina", value=timestamp, inline=False)
 
+            if db[str(guild.id)]["last_message"] is not None:
+                channelID, messageID = itemgetter("channel", "message")(db[str(guild.id)]["last_message"])
+
+                if edit:
+                    try:
+                        channel = await client.fetch_channel(channelID)
+                        message = await channel.fetch_message(messageID)
+                        await message.edit(embed=embed)
+                        return
+                    except discord.errors.NotFound as e:
+                        pass
+                else:
+                    try:
+                        channel = await client.fetch_channel(channelID)
+                        message = await channel.fetch_message(messageID)
+                        await message.delete()
+                    except discord.errors.NotFound as e:  # we really do not need to handle this, I promise
+                        pass
             newMessage = await client.get_channel(db[str(guild.id)]["selected_channel"]).send(embed=embed)
             db[str(guild.id)]["last_message"] = {"channel": newMessage.channel.id, "message": newMessage.id}
 
