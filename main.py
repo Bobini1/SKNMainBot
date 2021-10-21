@@ -1,12 +1,10 @@
 from datetime import datetime
 import discord
 from dotenv import load_dotenv
-import os
 from discord.ext import commands
 import shelve
 from operator import itemgetter
 import RPi.GPIO as GPIO
-from functools import partial
 import pickle as pkl
 import asyncio
 import os.path
